@@ -1,0 +1,170 @@
+<?php
+add_action( 'wp_enqueue_scripts', 'my_theme_enqueue_styles' );
+function my_theme_enqueue_styles() {
+	// wp_enqueue_style( 'child-style',
+	// 	get_stylesheet_uri(),
+	// 	array( 'parenthandle' ),
+	// 	wp_get_theme()->get( 'Version' ) // This only works if you have Version defined in the style header.
+	// );
+	
+	$css_url = get_stylesheet_directory_uri().'/assets/css/';
+	$js_url = get_stylesheet_directory_uri().'/assets/js/';
+	wp_register_script( 'bootstrap', $js_url . 'bootstrap.bundle.js', array(), ASTRA_THEME_VERSION, true );
+	wp_register_style( 'bootstrap', $css_url . 'bootstrap.min.css', array(), ASTRA_THEME_VERSION, 'all' );
+	
+}
+
+function test_script(){
+
+}
+// add_action('wp_footer','test_script');
+
+
+// Register Wills Post Type
+function create_wills_cpt()
+{
+    $labels = [
+        "name" => "Wills",
+        "singular_name" => "Will",
+        "menu_name" => "Wills",
+        "add_new_item" => "Add New Will",
+        "edit_item" => "Edit Will",
+        "new_item" => "New Will",
+        "view_item" => "View Will",
+        "search_items" => "Search Will",
+        "not_found" => "No Will found",
+        "not_found_in_trash" => "No wills found in Trash",
+    ];
+
+    $args = [
+        "label" => "Wills",
+        "labels" => $labels,
+        "public" => true,
+        "publicly_queryable" => true,
+        "show_ui" => true,
+        "show_in_menu" => true,
+        "query_var" => true,
+        "rewrite" => ["slug" => "wills"],
+        "capability_type" => "post",
+        "has_archive" => true,
+        "hierarchical" => false,
+        "menu_position" => 5,
+        "supports" => ["title", "editor", "thumbnail"],
+    ];
+
+    register_post_type("wills", $args);
+}
+add_action("init", "create_wills_cpt");
+
+function update_form_data(){
+	$data = $_POST['data'];
+	$user_id = get_current_user_id();
+	$update_data = update_user_meta($user_id,'wills_form_data',$data);
+	if($update_data){
+		wp_send_json_success(['data'=>$data]);
+	}
+	else{
+		wp_send_json_error(['message'=>'Unknown Error']);
+	}
+	wp_die();
+}
+add_action('wp_ajax_update_form_data','update_form_data');
+
+function updateNumViews(){
+	$user_id = get_current_user_id();
+	if($user_id){
+		$current_val = get_user_meta($user_id,'numViews',true);
+		if(empty($current_val) || !isset($current_val)){
+			update_user_meta($user_id,'numViews',1);
+		} else if($current_val >= 5){
+			wp_send_json_error();
+			die();	
+		} else {
+			update_user_meta($user_id,'numViews',++$current_val);
+		}
+		wp_send_json_success(['current'=>$current_val]);
+		die();
+	}else{
+		wp_send_json_error();
+		die();
+	}
+}
+add_action('wp_ajax_updateNumViews','updateNumViews');
+
+
+function sign_upload_dir($dir){	
+	return array(
+        'path'   => $dir['basedir'] . '/signs',
+        'url'    => $dir['baseurl'] . '/signs',
+        'subdir' => '/signs',
+    ) + $dir;
+}
+//sign_frontend_ajax_upload
+function sign_frontend_ajax_upload(){
+	if ( !isset($_POST['signnonce']) || !wp_verify_nonce( $_POST['signnonce'], 'signuploadnonce' ) ) {
+         wp_send_json_error(['message'=>'Security Check Failed']) ; 
+		 exit;
+    } else {
+         
+        if ( isset($_FILES) && !empty($_FILES) ) {			
+            require_once( ABSPATH . 'wp-admin/includes/image.php' );
+            require_once( ABSPATH . 'wp-admin/includes/file.php' );
+            require_once( ABSPATH . 'wp-admin/includes/media.php' );
+             
+            if ( isset($_FILES['sign_file']['error']) && $_FILES['sign_file']['error'] == 0 ) {
+				$file_name = basename($_FILES['sign_file']['name']);
+				// $extension = pathinfo($file_name, PATHINFO_EXTENSION);
+				$_FILES['sign_file']['name'] = uniqid()."_$file_name";
+				add_filter( 'upload_dir', 'sign_upload_dir' );
+				$file_id = media_handle_upload( 'sign_file', 0 );
+				remove_filter( 'upload_dir', 'sign_upload_dir' );
+                if ( !is_wp_error( $file_id ) ) {
+					wp_send_json_success(['url'=>wp_get_attachment_url($file_id)]);					
+					exit;
+                }
+            }
+        }                 
+    }
+    wp_die();
+}
+add_action('wp_ajax_sign_frontend_ajax_upload','sign_frontend_ajax_upload');
+
+//send_will_email
+function send_will_email(){
+	$pass_code = rand(1000,9999);
+	$user_id = get_current_user_id();
+	$res = update_usermeta($user_id,'will_pass',$pass_code);
+	if($res){
+		$post_title = $_POST['will_name']."'s Will";
+		$new_post = array(
+			'post_title'    => $post_title,
+			'post_content'  => '',
+			'post_status'   => 'publish', 
+			'post_type'     => 'wills', 
+		);
+		
+		$new_post_id = wp_insert_post($new_post);
+		
+		if ($new_post_id) {
+			wp_send_json_success(['msg'=>"New post created with ID: " . $new_post_id]);			
+		} else {
+			wp_send_json_error(['msg'=>"Error creating new post"]);						
+		}
+		exit;
+
+
+		$to_email = $_POST['email'];
+		$subject = 'Test Email';
+		$body = "This is a test email sent programmatically using WordPress. Pass- $pass_code";
+		$headers = array('Content-Type: text/html; charset=UTF-8');
+		if ( wp_mail( $to_email, $subject, $body, $headers ) ) {			
+			wp_send_json_success(['msg'=>'Email sent successfully!']);
+		} else {
+			wp_send_json_error(['msg'=>'Email could not be sent.']);			
+		}
+	} else {
+		wp_send_json_error(['msg'=>'Error generating pass code!']);
+	}	
+	exit;
+}
+add_action('wp_ajax_send_will_email','send_will_email');

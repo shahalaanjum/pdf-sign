@@ -1,0 +1,24 @@
+@font-face {
+    font-family: 'Bodoni Moda 72pt';
+    src: url('BodoniModa72pt-Bold.eot');
+    src: url('BodoniModa72pt-Bold.eot?#iefix') format('embedded-opentype'),
+        url('BodoniModa72pt-Bold.woff2') format('woff2'),
+        url('BodoniModa72pt-Bold.woff') format('woff'),
+        url('BodoniModa72pt-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Bodoni Moda 72pt';
+    src: url('BodoniModa72pt-Regular.eot');
+    src: url('BodoniModa72pt-Regular.eot?#iefix') format('embedded-opentype'),
+        url('BodoniModa72pt-Regular.woff2') format('woff2'),
+        url('BodoniModa72pt-Regular.woff') format('woff'),
+        url('BodoniModa72pt-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+

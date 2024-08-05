@@ -1,0 +1,11 @@
+@font-face {
+    font-family: 'Avenir LT Std 55 Roman';
+    src: url('AvenirLTStd-Heavy.eot');
+    src: url('AvenirLTStd-Heavy.eot?#iefix') format('embedded-opentype'),
+        url('AvenirLTStd-Heavy.woff2') format('woff2'),
+        url('AvenirLTStd-Heavy.woff') format('woff'),
+        url('AvenirLTStd-Heavy.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
